@@ -1,0 +1,1168 @@
+{% extends "base.html" %}
+{% block title %}Nueva Solicitud{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Registrar Nueva Solicitud</h2>
+
+  <form method="POST" action="{{ url_for('ventas.crear_solicitud') }}" id="form-solicitud" novalidate>
+    {{ csrf_token() if csrf_token is defined }}
+
+    <!-- =========================
+         DETALLES GENERALES
+         ========================= -->
+    <h4 class="mt-4">Detalles Generales</h4>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Departamento</label>
+        <select name="departamento" class="form-select" required>
+          <option value="C">C</option>
+          <option value="P">P</option>
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Vendedor</label>
+        <select name="vendedor" class="form-select" required>
+          <option value="Guillermo Martínez">Guillermo Martínez</option>
+          <option value="Vicente Martínez">Vicente Martínez</option>
+          <option value="Rodrigo Tangassi">Rodrigo Tangassi</option>
+          <option value="Paulina Mariscal">Paulina Mariscal</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label d-block">Prioridad</label>
+        <div class="pt-1">
+          <label class="me-3"><input type="radio" name="prioridad" value="estándar" checked> Estándar</label>
+          <label><input type="radio" name="prioridad" value="urgente"> Urgente</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cliente / Prospecto -->
+    <div class="row g-3 mt-1">
+      <div class="col-md-4">
+        <label class="form-label">Tipo de solicitante</label>
+        <div class="d-flex gap-3">
+          <label class="form-check">
+            <input class="form-check-input" type="radio" name="cliente_tipo" value="cliente" checked>
+            <span class="form-check-label">Cliente</span>
+          </label>
+          <label class="form-check">
+            <input class="form-check-input" type="radio" name="cliente_tipo" value="prospecto">
+            <span class="form-check-label">Prospecto</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Select de clientes (catálogo) -->
+      <div class="col-md-4" id="clienteSelectWrap">
+        <label class="form-label">Cliente</label>
+        <select name="cliente_id" id="cliente_id" class="form-select">
+          <option value="">— Selecciona —</option>
+          {% for c in clientes %}
+            <option value="{{ c.id }}">{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Campo prospecto -->
+      <div class="col-md-4" id="prospectoField" hidden>
+        <label class="form-label">Nombre de prospecto</label>
+        <input type="text" name="prospecto_nombre" id="prospecto_nombre" class="form-control" placeholder="Nombre del prospecto">
+      </div>
+    </div>
+
+    <!-- Siempre enviar una cadena legible para models.Solicitud.cliente -->
+    <input type="hidden" name="cliente" id="cliente_hidden">
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-12">
+        <label class="form-label">Commodity</label>
+        <input type="text" name="commodity" class="form-control" required>
+      </div>
+    </div>
+
+    <!-- =========================
+         SERVICIOS SOLICITADOS (MÚLTIPLES)
+         ========================= -->
+    <h4 class="mt-4">Servicios solicitados</h4>
+    <div class="row g-3 mb-2">
+      <div class="col-auto form-check">
+        <input class="form-check-input" type="checkbox" name="servicios[]" value="aereo" id="svcAereo">
+        <label class="form-check-label" for="svcAereo">Aéreo</label>
+      </div>
+      <div class="col-auto form-check">
+        <input class="form-check-input" type="checkbox" name="servicios[]" value="maritimo" id="svcMaritimo">
+        <label class="form-check-label" for="svcMaritimo">Marítimo</label>
+      </div>
+      <div class="col-auto form-check">
+        <input class="form-check-input" type="checkbox" name="servicios[]" value="terrestre" id="svcTerrestre">
+        <label class="form-check-label" for="svcTerrestre">Terrestre</label>
+      </div>
+    </div>
+
+    <!-- ======= AÉREO ======= -->
+    <div class="svc-section" data-svc="aereo" hidden>
+      <h5 class="mt-4">Detalles del servicio — Aéreo</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Tipo de embarque</label>
+          <select name="aereo_tipo_embarque" class="form-select" data-req-svc="aereo">
+            <option value="FN">FN</option><option value="IT">IT</option><option value="ET">ET</option>
+            <option value="FI">FI</option><option value="IA">IA</option><option value="EA">EA</option>
+            <option value="IM">IM</option><option value="EM">EM</option><option value="OT">OT</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Incoterm</label>
+          <select name="aereo_incoterm" class="form-select" data-req-svc="aereo">
+            <option value="EXW">EXW</option><option value="FCA">FCA</option><option value="CPT">CPT</option>
+            <option value="CIP">CIP</option><option value="DAP">DAP</option><option value="DPU">DPU</option>
+            <option value="DDP">DDP</option><option value="FOB">FOB</option><option value="CFR">CFR</option>
+            <option value="CIF">CIF</option><option value="ninguno">Ninguno</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">UN/Clase</label>
+          <input type="text" name="aereo_un_clase" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Estibable</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="aereo_estibable" value="si" data-req-svc="aereo"> Sí</label>
+            <label><input type="radio" name="aereo_estibable" value="no"> No</label>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Seguro</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="aereo_seguro" value="si"> Sí</label>
+            <label><input type="radio" name="aereo_seguro" value="no" checked> No</label>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Valor factura</label>
+          <input type="number" step="0.01" name="aereo_valor_factura" id="aereo_valor_factura" class="form-control">
+          <div class="form-text">Obligatorio si Seguro = Sí.</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tipo de cambio</label>
+          <select name="aereo_tipo_cambio" class="form-select">
+            <option value="">Selecciona…</option>
+            <option value="USD">USD</option><option value="EUR">EUR</option><option value="MXN">MXN</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Origen — Aéreo</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">País</label>
+          <select name="aereo_origen_pais" id="aereo_origen_pais" class="form-select" data-req-svc="aereo">
+            <option value="México">México</option><option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ciudad</label>
+          <select name="aereo_origen_ciudad" id="aereo_origen_ciudad" class="form-select" data-req-svc="aereo">
+            <option value="">Selecciona ciudad</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">C.P.</label>
+          <input type="text" name="aereo_origen_cp" class="form-control" data-req-svc="aereo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Recolección</label>
+          <input type="text" name="aereo_origen_recoleccion" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Aeropuerto</label>
+          <input type="text" name="aereo_origen_puerto" class="form-control" placeholder="Código IATA o nombre" data-req-svc="aereo">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Despacho</label>
+          <select name="aereo_origen_despacho" class="form-select" data-req-svc="aereo">
+            <option value="">—</option><option value="si">Sí</option><option value="no">No</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Destino — Aéreo</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">País</label>
+          <select name="aereo_destino_pais" id="aereo_destino_pais" class="form-select" data-req-svc="aereo">
+            <option value="México">México</option><option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ciudad</label>
+          <select name="aereo_destino_ciudad" id="aereo_destino_ciudad" class="form-select" data-req-svc="aereo">
+            <option value="">Selecciona ciudad</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">C.P.</label>
+          <input type="text" name="aereo_destino_cp" class="form-control" data-req-svc="aereo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Entrega</label>
+          <input type="text" name="aereo_destino_entrega" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Aeropuerto</label>
+          <input type="text" name="aereo_destino_puerto" class="form-control" placeholder="Código IATA o nombre" data-req-svc="aereo">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Despacho</label>
+          <select name="aereo_destino_despacho" class="form-select" data-req-svc="aereo">
+            <option value="">—</option><option value="si">Sí</option><option value="no">No</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Unidad de Transporte — Aéreo</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Tipo de unidad</label>
+          <input type="text" name="aereo_unidad" class="form-control" data-req-svc="aereo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Configuración del servicio</label>
+          <select name="aereo_servicio_unidad" class="form-select" data-req-svc="aereo">
+            <option value="">—</option><option value="sencillo">Sencillo</option><option value="full">Full</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Maniobras</label>
+          <select name="aereo_maniobra" class="form-select" data-req-svc="aereo">
+            <option value="">—</option>
+            <option value="carga">Carga</option><option value="descarga">Descarga</option>
+            <option value="ambas">Ambas</option><option value="ninguna">Ninguna</option>
+          </select>
+        </div>
+      </div>
+    </div><!-- /Aéreo -->
+
+    <!-- ======= MARÍTIMO ======= -->
+    <div class="svc-section" data-svc="maritimo" hidden>
+      <h5 class="mt-4">Detalles del servicio — Marítimo</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Tipo de embarque</label>
+          <select name="maritimo_tipo_embarque" class="form-select" data-req-svc="maritimo">
+            <option value="FN">FN</option><option value="IT">IT</option><option value="ET">ET</option>
+            <option value="FI">FI</option><option value="IA">IA</option><option value="EA">EA</option>
+            <option value="IM">IM</option><option value="EM">EM</option><option value="OT">OT</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Incoterm</label>
+          <select name="maritimo_incoterm" class="form-select" data-req-svc="maritimo">
+            <option value="EXW">EXW</option><option value="FCA">FCA</option><option value="CPT">CPT</option>
+            <option value="CIP">CIP</option><option value="DAP">DAP</option><option value="DPU">DPU</option>
+            <option value="DDP">DDP</option><option value="FOB">FOB</option><option value="CFR">CFR</option>
+            <option value="CIF">CIF</option><option value="ninguno">Ninguno</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">UN/Clase</label>
+          <input type="text" name="maritimo_un_clase" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Estibable</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="maritimo_estibable" value="si" data-req-svc="maritimo"> Sí</label>
+            <label><input type="radio" name="maritimo_estibable" value="no"> No</label>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Seguro</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="maritimo_seguro" value="si"> Sí</label>
+            <label><input type="radio" name="maritimo_seguro" value="no" checked> No</label>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Valor factura</label>
+          <input type="number" step="0.01" name="maritimo_valor_factura" id="maritimo_valor_factura" class="form-control">
+          <div class="form-text">Obligatorio si Seguro = Sí.</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tipo de cambio</label>
+          <select name="maritimo_tipo_cambio" class="form-select">
+            <option value="">Selecciona…</option>
+            <option value="USD">USD</option><option value="EUR">EUR</option><option value="MXN">MXN</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Origen — Marítimo</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">País</label>
+          <select name="maritimo_origen_pais" id="maritimo_origen_pais" class="form-select" data-req-svc="maritimo">
+            <option value="México">México</option><option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ciudad</label>
+          <select name="maritimo_origen_ciudad" id="maritimo_origen_ciudad" class="form-select" data-req-svc="maritimo">
+            <option value="">Selecciona ciudad</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">C.P.</label>
+          <input type="text" name="maritimo_origen_cp" class="form-control" data-req-svc="maritimo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Recolección</label>
+          <input type="text" name="maritimo_origen_recoleccion" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Puerto</label>
+          <input type="text" name="maritimo_origen_puerto" class="form-control" placeholder="Nombre o código" data-req-svc="maritimo">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Despacho</label>
+          <select name="maritimo_origen_despacho" class="form-select" data-req-svc="maritimo">
+            <option value="">—</option><option value="si">Sí</option><option value="no">No</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Destino — Marítimo</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">País</label>
+          <select name="maritimo_destino_pais" id="maritimo_destino_pais" class="form-select" data-req-svc="maritimo">
+            <option value="México">México</option><option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ciudad</label>
+          <select name="maritimo_destino_ciudad" id="maritimo_destino_ciudad" class="form-select" data-req-svc="maritimo">
+            <option value="">Selecciona ciudad</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">C.P.</label>
+          <input type="text" name="maritimo_destino_cp" class="form-control" data-req-svc="maritimo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Entrega</label>
+          <input type="text" name="maritimo_destino_entrega" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Puerto</label>
+          <input type="text" name="maritimo_destino_puerto" class="form-control" placeholder="Nombre o código" data-req-svc="maritimo">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Despacho</label>
+          <select name="maritimo_destino_despacho" class="form-select" data-req-svc="maritimo">
+            <option value="">—</option><option value="si">Sí</option><option value="no">No</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Unidad de Transporte — Marítimo</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Tipo de unidad</label>
+          <input type="text" name="maritimo_unidad" class="form-control" data-req-svc="maritimo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Configuración del servicio</label>
+          <select name="maritimo_servicio_unidad" class="form-select" data-req-svc="maritimo">
+            <option value="">—</option><option value="sencillo">Sencillo</option><option value="full">Full</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Maniobras</label>
+          <select name="maritimo_maniobra" class="form-select" data-req-svc="maritimo">
+            <option value="">—</option>
+            <option value="carga">Carga</option><option value="descarga">Descarga</option>
+            <option value="ambas">Ambas</option><option value="ninguna">Ninguna</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modalidad FCL / LCL -->
+      <div class="row g-3 mt-3">
+        <div class="col-md-6">
+          <label class="form-label d-block">Modalidad (Marítimo)</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="maritimo_modalidad" value="FCL" checked> FCL (contenedor completo)</label>
+            <label><input type="radio" name="maritimo_modalidad" value="LCL"> LCL (consolidado)</label>
+          </div>
+          <div class="form-text">Si eliges LCL, se ocultará la tabla de contenedores.</div>
+        </div>
+      </div>
+
+      <div class="card mt-3" id="cardCont_maritimo">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de contenedor (opcional)</label>
+              <input type="text" name="maritimo_tipo_contenedor" class="form-control" placeholder="20DC / 40HC / etc.">
+            </div>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Contenedores</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddCont_maritimo">+ Agregar tipo</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle" id="tblCont_maritimo">
+              <thead>
+                <tr>
+                  <th style="width: 40%">Tipo de contenedor</th>
+                  <th style="width: 25%">Cantidad</th>
+                  <th style="width: 20%" class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <th>Total contenedores</th>
+                  <th>
+                    <input type="number" class="form-control" name="maritimo_numero_contenedor" id="totalCont_maritimo" readonly>
+                  </th>
+                  <th></th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- /Marítimo -->
+
+    <!-- ======= TERRESTRE ======= -->
+    <div class="svc-section" data-svc="terrestre" hidden>
+      <h5 class="mt-4">Detalles del servicio — Terrestre</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Tipo de embarque</label>
+          <select name="terrestre_tipo_embarque" class="form-select" data-req-svc="terrestre">
+            <option value="FN">FN</option><option value="IT">IT</option><option value="ET">ET</option>
+            <option value="FI">FI</option><option value="IA">IA</option><option value="EA">EA</option>
+            <option value="IM">IM</option><option value="EM">EM</option><option value="OT">OT</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Incoterm</label>
+          <select name="terrestre_incoterm" class="form-select" data-req-svc="terrestre">
+            <option value="EXW">EXW</option><option value="FCA">FCA</option><option value="CPT">CPT</option>
+            <option value="CIP">CIP</option><option value="DAP">DAP</option><option value="DPU">DPU</option>
+            <option value="DDP">DDP</option><option value="FOB">FOB</option><option value="CFR">CFR</option>
+            <option value="CIF">CIF</option><option value="ninguno">Ninguno</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">UN/Clase</label>
+          <input type="text" name="terrestre_un_clase" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Estibable</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="terrestre_estibable" value="si" data-req-svc="terrestre"> Sí</label>
+            <label><input type="radio" name="terrestre_estibable" value="no"> No</label>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Seguro</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="terrestre_seguro" value="si"> Sí</label>
+            <label><input type="radio" name="terrestre_seguro" value="no" checked> No</label>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Valor factura</label>
+          <input type="number" step="0.01" name="terrestre_valor_factura" id="terrestre_valor_factura" class="form-control">
+          <div class="form-text">Obligatorio si Seguro = Sí.</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tipo de cambio</label>
+          <select name="terrestre_tipo_cambio" class="form-select">
+            <option value="">Selecciona…</option>
+            <option value="USD">USD</option><option value="EUR">EUR</option><option value="MXN">MXN</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Origen — Terrestre</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">País</label>
+          <select name="terrestre_origen_pais" id="terrestre_origen_pais" class="form-select" data-req-svc="terrestre">
+            <option value="México">México</option><option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ciudad</label>
+          <select name="terrestre_origen_ciudad" id="terrestre_origen_ciudad" class="form-select" data-req-svc="terrestre">
+            <option value="">Selecciona ciudad</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">C.P.</label>
+          <input type="text" name="terrestre_origen_cp" class="form-control" data-req-svc="terrestre">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Recolección</label>
+          <input type="text" name="terrestre_origen_recoleccion" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Puerto</label>
+          <input type="text" name="terrestre_origen_puerto" class="form-control" placeholder="Nombre o código">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cruce</label>
+          <input type="text" name="terrestre_origen_cruce" class="form-control" placeholder="Nombre del cruce">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Despacho</label>
+          <select name="terrestre_origen_despacho" class="form-select" data-req-svc="terrestre">
+            <option value="">—</option><option value="si">Sí</option><option value="no">No</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Destino — Terrestre</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">País</label>
+          <select name="terrestre_destino_pais" id="terrestre_destino_pais" class="form-select" data-req-svc="terrestre">
+            <option value="México">México</option><option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ciudad</label>
+          <select name="terrestre_destino_ciudad" id="terrestre_destino_ciudad" class="form-select" data-req-svc="terrestre">
+            <option value="">Selecciona ciudad</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">C.P.</label>
+          <input type="text" name="terrestre_destino_cp" class="form-control" data-req-svc="terrestre">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Entrega</label>
+          <input type="text" name="terrestre_destino_entrega" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Puerto</label>
+          <input type="text" name="terrestre_destino_puerto" class="form-control" placeholder="Nombre o código">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cruce</label>
+          <input type="text" name="terrestre_destino_cruce" class="form-control" placeholder="Nombre del cruce">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Despacho</label>
+          <select name="terrestre_destino_despacho" class="form-select" data-req-svc="terrestre">
+            <option value="">—</option><option value="si">Sí</option><option value="no">No</option>
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mt-4">Unidad de Transporte — Terrestre</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Tipo de unidad</label>
+          <input type="text" name="terrestre_unidad" class="form-control" data-req-svc="terrestre">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Configuración del servicio</label>
+          <select name="terrestre_servicio_unidad" class="form-select" data-req-svc="terrestre">
+            <option value="">—</option><option value="sencillo">Sencillo</option><option value="full">Full</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Maniobras</label>
+          <select name="terrestre_maniobra" class="form-select" data-req-svc="terrestre">
+            <option value="">—</option>
+            <option value="carga">Carga</option><option value="descarga">Descarga</option>
+            <option value="ambas">Ambas</option><option value="ninguna">Ninguna</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modalidad FCL / LCL -->
+      <div class="row g-3 mt-3">
+        <div class="col-md-6">
+          <label class="form-label d-block">Modalidad (Terrestre)</label>
+          <div class="pt-1">
+            <label class="me-3"><input type="radio" name="terrestre_modalidad" value="FCL" checked> FCL</label>
+            <label><input type="radio" name="terrestre_modalidad" value="LCL"> LCL</label>
+          </div>
+          <div class="form-text">Si eliges LCL, se ocultará la tabla de contenedores.</div>
+        </div>
+      </div>
+
+      <div class="card mt-3" id="cardCont_terrestre">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de contenedor (opcional)</label>
+              <input type="text" name="terrestre_tipo_contenedor" class="form-control" placeholder="20DC / 40HC / etc.">
+            </div>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Contenedores</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddCont_terrestre">+ Agregar tipo</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle" id="tblCont_terrestre">
+              <thead>
+                <tr>
+                  <th style="width: 40%">Tipo de contenedor</th>
+                  <th style="width: 25%">Cantidad</th>
+                  <th style="width: 20%" class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <th>Total contenedores</th>
+                  <th>
+                    <input type="number" class="form-control" name="terrestre_numero_contenedor" id="totalCont_terrestre" readonly>
+                  </th>
+                  <th></th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- /Terrestre -->
+
+    <!-- =========================
+         DETALLE DE CARGA (GLOBAL)
+         ========================= -->
+    <h4 class="mt-4">Detalle de Carga</h4>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Tipo de carga</label>
+        <select name="tipo_carga" class="form-select" required>
+          <option value="pallet">Pallet</option>
+          <option value="caja">Caja</option>
+          <option value="pieza">Pieza</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label d-block">Peso</label>
+        <div class="pt-1">
+          <label class="me-3"><input type="radio" name="peso_unidad" value="kg" checked> Kg</label>
+          <label><input type="radio" name="peso_unidad" value="lb"> Lb</label>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label d-block">Longitud</label>
+        <div class="pt-1">
+          <label class="me-3"><input type="radio" name="longitud_unidad" value="cm" checked> Cm</label>
+          <label><input type="radio" name="longitud_unidad" value="in"> In</label>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Volumen (m³)</label>
+        <input type="number" step="0.01" name="volumen_cbm" class="form-control" required>
+      </div>
+    </div>
+
+    <div class="row mt-3">
+      <div class="col-md-4">
+        <label class="form-label d-block">Cotiza por</label>
+        <div class="pt-1">
+          <label class="me-3"><input type="radio" name="cotiza_por" value="totales" checked onclick="toggleCotiza()"> Totales</label>
+          <label><input type="radio" name="cotiza_por" value="dimensiones" onclick="toggleCotiza()"> Dimensiones</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Totales por renglón -->
+    <div id="totalesFields" class="mt-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Totales por renglón</h5>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTotalesRow()">Agregar renglón</button>
+      </div>
+
+      <div id="totalesRows" class="row g-2"></div>
+
+      <div class="row g-2 mt-2">
+        <div class="col-md-2"><label>No. S</label><input type="number" name="no_s" id="no_s" class="form-control" readonly></div>
+        <div class="col-md-4"><label>Dimensiones (concat)</label><input type="text" name="dimensiones_totales" id="dimensiones_totales" class="form-control" readonly></div>
+        <div class="col-md-2"><label>CBM total</label><input type="number" step="0.01" name="cbm_totales" id="cbm_totales" class="form-control" readonly></div>
+        <div class="col-md-2"><label>GW total</label><input type="number" step="0.01" name="gw_totales" id="gw_totales" class="form-control" readonly></div>
+        <div class="col-md-2"><label>VW total</label><input type="number" step="0.01" name="vw_totales" id="vw_totales" class="form-control" readonly></div>
+      </div>
+      <div class="row g-2 mt-2">
+        <div class="col-md-2">
+          <label>Piezas total</label>
+          <input type="number" name="piezas_totales" id="piezas_totales" class="form-control" readonly>
+        </div>
+      </div>
+
+      <input type="hidden" name="totales_json" id="totales_json">
+    </div>
+
+    <!-- Dimensiones por renglón -->
+    <div id="dimensionesFields" class="mt-3" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Dimensiones por renglón</h5>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDimensionRow()">Agregar renglón</button>
+      </div>
+      <div id="dimRows" class="row g-2"></div>
+
+      <div class="row g-2 mt-2">
+        <div class="col-md-2"><label>No. total</label><input type="number" name="no_dim" id="no_dim" class="form-control" readonly></div>
+        <div class="col-md-2"><label>Largo</label><input type="number" name="largo_dim" id="largo_dim" class="form-control" readonly></div>
+        <div class="col-md-2"><label>Ancho</label><input type="number" name="ancho_dim" id="ancho_dim" class="form-control" readonly></div>
+        <div class="col-md-2"><label>Alto</label><input type="number" name="alto_dim" id="alto_dim" class="form-control" readonly></div>
+        <div class="col-md-2"><label>Peso</label><input type="number" name="peso_dim" id="peso_dim" class="form-control" readonly></div>
+      </div>
+      <input type="hidden" name="dimensiones_json" id="dimensiones_json">
+    </div>
+
+    <!-- ADICIONALES -->
+    <h4 class="mt-4">Adicionales</h4>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Comentarios</label>
+        <textarea name="comentarios" class="form-control" rows="3"></textarea>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Asunto Email</label>
+        <input type="text" name="asunto_email" class="form-control">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary my-4">Registrar Solicitud</button>
+  </form>
+</div>
+
+<!-- =========================
+     SCRIPTS
+     ========================= -->
+<script>
+  // ---------- utilidades ----------
+  const SVC_PREFIXES = ["aereo","maritimo","terrestre"];
+  const CITIES_BY_COUNTRY = {"México":["CDMX","Guadalajara","Monterrey"],"USA":["Houston","Dallas","Los Angeles"]};
+  const q  = (sel, ctx=document) => ctx.querySelector(sel);
+  const qa = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+  const toNum  = v => { const s=(v??'').toString().trim(); return s===''?0:parseFloat(s); };
+  const clamp2 = n => isFinite(n) ? Math.round(n*100)/100 : 0;
+  const activeServices = () => SVC_PREFIXES.filter(p => q(`input[name="servicios[]"][value="${p}"]`)?.checked);
+
+  // ---------- Cliente / Prospecto ----------
+  function syncClienteHidden(){
+    const tipo = q('input[name="cliente_tipo"]:checked')?.value;
+    const hidden = q('#cliente_hidden');
+    if (!hidden) return;
+    if (tipo === 'cliente') {
+      const sel = q('#cliente_id');
+      const txt = sel && sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text.trim() : '';
+      hidden.value = txt || '';
+    } else {
+      const p = q('#prospecto_nombre');
+      hidden.value = (p?.value || '').trim();
+    }
+  }
+  function toggleProspecto(){
+    const isPros = q('input[name="cliente_tipo"]:checked')?.value === 'prospecto';
+    q('#prospectoField').hidden = !isPros;
+    q('#clienteSelectWrap').hidden = !!isPros;
+    const prospecto = q('#prospecto_nombre');
+    const clienteSel = q('#cliente_id');
+    if (prospecto) prospecto.required = isPros;
+    if (clienteSel) clienteSel.required = !isPros;
+    if (isPros && clienteSel) clienteSel.value = "";
+    if (!isPros && prospecto) prospecto.value = "";
+    syncClienteHidden();
+  }
+
+  // ---------- Cotiza por ----------
+  function toggleCotiza(){
+    const selected = q('input[name="cotiza_por"]:checked')?.value || 'totales';
+    q('#totalesFields').style.display     = (selected === 'totales') ? 'block' : 'none';
+    q('#dimensionesFields').style.display = (selected === 'dimensiones') ? 'block' : 'none';
+  }
+
+  // ---------- País -> ciudades ----------
+  function populateCitiesFor(paisSel, ciudadSel, selectedValue=""){
+    const cities = CITIES_BY_COUNTRY[paisSel.value] || [];
+    ciudadSel.innerHTML = '<option value="">Selecciona ciudad</option>' + cities.map(c=>`<option value="${c}">${c}</option>`).join('');
+    if (selectedValue && cities.includes(selectedValue)) ciudadSel.value = selectedValue; else ciudadSel.value='';
+  }
+  function setupCountryCity(prefix){
+    const oPais = q(`#${prefix}_origen_pais`);
+    const oCiu  = q(`#${prefix}_origen_ciudad`);
+    const dPais = q(`#${prefix}_destino_pais`);
+    const dCiu  = q(`#${prefix}_destino_ciudad`);
+    if (oPais && oCiu){ populateCitiesFor(oPais, oCiu); oPais.addEventListener('change', ()=>populateCitiesFor(oPais,oCiu,oCiu.value)); }
+    if (dPais && dCiu){ populateCitiesFor(dPais, dCiu); dPais.addEventListener('change', ()=>populateCitiesFor(dPais,dCiu,dCiu.value)); }
+  }
+
+  // ---------- Seguro => valor factura requerido ----------
+  function setupSeguroRequired(svc){
+    const radios = qa(`input[name="${svc}_seguro"]`);
+    const vf = q(`#${svc}_valor_factura`);
+    function apply(){
+      const sel = q(`input[name="${svc}_seguro"]:checked`)?.value;
+      if (vf) vf.required = (sel === 'si');
+    }
+    radios.forEach(r=>r.addEventListener('change', apply));
+    apply();
+  }
+
+  // ---------- Modalidad FCL / LCL ----------
+  function setupModalidadToggle(prefix){
+  const radios = qa(`input[name="${prefix}_modalidad"]`);
+  if (!radios.length) return;
+
+  // Evitar wiring duplicado
+  const flag = `data-wired-${prefix}-modalidad`;
+  if (document.body.hasAttribute(flag)) {
+    // ya estaba cableado: solo aplica el estado actual
+    apply();
+    return;
+  }
+  document.body.setAttribute(flag, "1");
+
+  const contCard = q(`#cardCont_${prefix}`);
+  const totalInput = q(`#totalCont_${prefix}`);
+  const tBody = q(`#tblCont_${prefix} tbody`);
+
+  function apply(){
+    const val = q(`input[name="${prefix}_modalidad"]:checked`)?.value || 'FCL';
+    const show = (val === 'FCL');
+    if (contCard) contCard.classList.toggle('d-none', !show);
+    if (!show){ // LCL: limpia tabla/totales
+      if (tBody) tBody.innerHTML = '';
+      if (totalInput) totalInput.value = '';
+    }
+  }
+
+  radios.forEach(r=>r.addEventListener('change', apply));
+  apply();
+}
+
+  // ---------- Mostrar/ocultar secciones por servicio ----------
+  function toggleSections(){
+    qa('.svc-section').forEach(sec => {
+      const svc = sec.dataset.svc;
+      const on = q(`input[name="servicios[]"][value="${svc}"]`)?.checked;
+      sec.hidden = !on;
+      qa('[data-req-svc]', sec).forEach(el => {
+        el.required = on && (el.getAttribute('data-req-svc') === svc);
+      });
+      if (on) seedFromMaster(svc); // <-- AÑADIDO: auto-sembra al activar
+  });
+      
+    ["maritimo","terrestre"].forEach(setupModalidadToggle);
+  }
+
+  // ---------- Autorrelleno entre servicios ----------
+
+  function masterService(){
+  // primer servicio activo según SVC_PREFIXES
+  const act = activeServices();
+  return act.length ? act[0] : null;
+}
+
+function getFieldNodes(prefix, suffix){
+  // Devuelve NodeList (pueden ser radios o un solo input/select)
+  return qa(`[name="${prefix}_${suffix}"]`);
+}
+
+function getFieldValue(prefix, suffix){
+  const nodes = getFieldNodes(prefix, suffix);
+  if (!nodes.length) return null;
+  // Radios
+  if (nodes.length > 1 && nodes[0].type === "radio"){
+    const checked = nodes.find(n => n.checked);
+    return checked ? checked.value : null;
+  }
+  // Input/select único
+  return nodes[0].value ?? "";
+}
+
+function isEmptyValueFor(nodes){
+  // Vacío si: para radios ninguno seleccionado; para input/select string vacía
+  if (!nodes || !nodes.length) return true;
+  if (nodes.length > 1 && nodes[0].type === "radio"){
+    return !nodes.some(n => n.checked);
+  }
+  return (nodes[0].value ?? "").trim() === "";
+}
+
+function setFieldIfEmpty(prefix, suffix, value){
+  const nodes = getFieldNodes(prefix, suffix);
+  if (!nodes.length || value == null || value === "") return;
+  // radios
+  if (nodes.length > 1 && nodes[0].type === "radio"){
+    if (!isEmptyValueFor(nodes)){
+      return; // ya había algo seleccionado
+    }
+    const target = nodes.find(n => (n.value||"").toLowerCase() === (value||"").toLowerCase());
+    if (target){
+      target.checked = true;
+      target.dispatchEvent(new Event("change", {bubbles:true}));
+    }
+    return;
+  }
+  // input/select único
+  if (isEmptyValueFor(nodes)){
+    nodes[0].value = value;
+    nodes[0].dispatchEvent(new Event("change", {bubbles:true}));
+  }
+}
+
+function seedFromMaster(targetPrefix){
+  const m = masterService();
+  if (!m || targetPrefix === m) return;
+  SHARED_SUFFIXES.forEach(sfx => {
+    const v = getFieldValue(m, sfx);
+    if (v != null && v !== ""){
+      setFieldIfEmpty(targetPrefix, sfx, v);
+    }
+  });
+}
+
+function seedAllFromMaster(){
+  const m = masterService();
+  if (!m) return;
+  activeServices().filter(p => p !== m).forEach(seedFromMaster);
+}
+
+  const SHARED_SUFFIXES = [
+  "tipo_embarque","incoterm",
+  "origen_pais","origen_ciudad","origen_cp","origen_recoleccion","origen_puerto","origen_cruce","origen_despacho",
+  "destino_pais","destino_ciudad","destino_cp","destino_entrega","destino_puerto","destino_cruce","destino_despacho",
+  "unidad","servicio_unidad","maniobra"
+];
+
+  function setField(prefix, suffix, value){
+    const name = `${prefix}_${suffix}`;
+    const els = qa(`[name="${name}"]`);
+    if (els.length === 0) return;
+    // radios
+    if (els.length > 1 && els[0].type === "radio"){
+      const target = els.find(e => (e.value||'').toLowerCase() === (value||'').toLowerCase());
+      if (target) { target.checked = true; target.dispatchEvent(new Event('change',{bubbles:true})); }
+      return;
+    }
+    // input/select único
+    const el = els[0];
+    if (!el.value){ // sólo si estaba vacío
+      el.value = value ?? "";
+      el.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+  }
+  function copyToOthers(fromPrefix, suffix, value){
+    activeServices().filter(p => p !== fromPrefix).forEach(p => setField(p, suffix, value));
+  }
+  function wireSyncHandlers(){
+  SVC_PREFIXES.forEach(prefix=>{
+    SHARED_SUFFIXES.forEach(suffix=>{
+      const name = `${prefix}_${suffix}`;
+      qa(`[name="${name}"]`).forEach(el=>{
+        // Usa 'change' en radios y SELECT, 'input' en inputs de texto/número
+        const evt = (el.type === 'radio' || el.tagName === 'SELECT') ? 'change' : 'input';
+        el.addEventListener(evt, ()=>{
+          // solo propaga si estoy editando el servicio maestro
+          if (prefix !== masterService()) return;
+          const value = (el.type === 'radio')
+              ? (q(`input[name="${name}"]:checked`)?.value ?? null)
+              : el.value;
+          activeServices()
+            .filter(p => p !== prefix)
+            .forEach(p => setFieldIfEmpty(p, suffix, value));
+        });
+      });
+    });
+  });
+}
+
+  // ---------- Totales (con Piezas) ----------
+  function addTotalesRow(preset={piezas:'',dimensiones:'',cbm:'',gw:'',vw:''}){
+    const c = q('#totalesRows');
+    const row = document.createElement('div');
+    row.className='col-12';
+    row.innerHTML = `
+      <div class="row g-2 align-items-end totales-row">
+        <div class="col-md-2"><label>Piezas</label><input type="number" min="0" step="1" class="form-control pz" value="${preset.piezas}"></div>
+        <div class="col-md-3"><label>Dimensiones (texto)</label><input type="text" class="form-control dimen" placeholder="e.g. 120x80x100 cm" value="${preset.dimensiones}"></div>
+        <div class="col-md-2"><label>CBM</label><input type="number" step="0.01" class="form-control cbm" value="${preset.cbm}"></div>
+        <div class="col-md-2"><label>GW</label><input type="number" step="0.01" class="form-control gw" value="${preset.gw}"></div>
+        <div class="col-md-2"><label>VW</label><input type="number" step="0.01" class="form-control vw" value="${preset.vw}"></div>
+        <div class="col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removeRow(this)">✕</button></div>
+      </div>`;
+    c.appendChild(row);
+    qa('input', row).forEach(i=>i.addEventListener('input', recomputeTotales));
+    recomputeTotales();
+  }
+  function removeRow(btn){
+    const row = btn.closest('.col-12'); row.remove();
+    recomputeTotales(); recomputeDimensiones();
+  }
+  function recomputeTotales(){
+  const rows = qa('#totalesRows .totales-row');
+  let piezas=0, cbm=0, gw=0, vw=0, dims=[];
+  rows.forEach(r=>{
+    piezas += parseInt((r.querySelector('.pz')?.value||'0'),10) || 0;
+    cbm    += toNum(r.querySelector('.cbm')?.value);
+    gw     += toNum(r.querySelector('.gw')?.value);
+    vw     += toNum(r.querySelector('.vw')?.value);
+    const d=(r.querySelector('.dimen')?.value||'').trim(); if (d) dims.push(d);
+  });
+
+
+  const elPiezas = q('#piezas_totales');
+  if (elPiezas) elPiezas.value = piezas;
+
+  const elCbm = q('#cbm_totales');     if (elCbm) elCbm.value = clamp2(cbm);
+  const elGw  = q('#gw_totales');      if (elGw)  elGw.value  = clamp2(gw);
+  const elVw  = q('#vw_totales');      if (elVw)  elVw.value  = clamp2(vw);
+  const elNoS = q('#no_s');            if (elNoS) elNoS.value = rows.length;
+  const elDim = q('#dimensiones_totales'); 
+  if (elDim) elDim.value = dims.join(' | ');
+
+  const arr = rows.map(r=>({
+    piezas: parseInt((r.querySelector('.pz')?.value||'0'),10) || 0,
+    dimensiones:(r.querySelector('.dimen')?.value||'').trim(),
+    cbm:toNum(r.querySelector('.cbm')?.value),
+    gw: toNum(r.querySelector('.gw')?.value),
+    vw: toNum(r.querySelector('.vw')?.value),
+  }));
+  const elJson = q('#totales_json');
+  if (elJson) elJson.value = JSON.stringify(arr);
+}
+
+  // ---------- Dimensiones ----------
+  function addDimensionRow(preset={no:'',largo:'',ancho:'',alto:'',peso:''}){
+    const c = q('#dimRows');
+    const row = document.createElement('div');
+    row.className='col-12';
+    row.innerHTML = `
+      <div class="row g-2 align-items-end dim-row">
+        <div class="col-md-2"><label>No.</label><input type="number" class="form-control d-no" value="${preset.no}"></div>
+        <div class="col-md-2"><label>Largo</label><input type="number" step="0.01" class="form-control d-l" value="${preset.largo}"></div>
+        <div class="col-md-2"><label>Ancho</label><input type="number" step="0.01" class="form-control d-a" value="${preset.ancho}"></div>
+        <div class="col-md-2"><label>Alto</label><input type="number" step="0.01" class="form-control d-h" value="${preset.alto}"></div>
+        <div class="col-md-2"><label>Peso</label><input type="number" step="0.01" class="form-control d-p" value="${preset.peso}"></div>
+        <div class="col-md-2"><button type="button" class="btn btn-outline-danger w-100" onclick="removeRow(this)">Eliminar</button></div>
+      </div>`;
+    c.appendChild(row);
+    qa('input', row).forEach(i=>i.addEventListener('input', recomputeDimensiones));
+    recomputeDimensiones();
+  }
+  function recomputeDimensiones(){
+    const rows = qa('#dimRows .dim-row');
+    let totalNo = 0;
+    const arr = rows.map(r=>{
+      const no = toNum(r.querySelector('.d-no')?.value); totalNo += no;
+      return {
+        no,
+        largo: toNum(r.querySelector('.d-l')?.value),
+        ancho: toNum(r.querySelector('.d-a')?.value),
+        alto:  toNum(r.querySelector('.d-h')?.value),
+        peso:  toNum(r.querySelector('.d-p')?.value),
+      };
+    });
+    q('#no_dim').value = totalNo || '';
+    q('#dimensiones_json').value = JSON.stringify(arr);
+  }
+
+  // ---------- Contenedores (FCL) ----------
+  function setupContenedores(svc){
+    const btnAdd = q(`#btnAddCont_${svc}`);
+    const tbl = q(`#tblCont_${svc}`);
+    if (!btnAdd || !tbl) return;
+    const tBody = tbl.querySelector('tbody');
+    const totalInput = q(`#totalCont_${svc}`);
+    let idx = 0;
+
+    function recalcTotal(){
+      let sum=0;
+      qa('input[type="number"][data-cont-cant]', tBody).forEach(inp=>{
+        const n=parseInt(inp.value||'0',10); if(!isNaN(n)) sum+=n;
+      });
+      if (totalInput) totalInput.value = sum;
+    }
+    function addRow(){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <select class="form-select" name="${svc}_cont_${idx}_tipo">
+            <option value="">—</option>
+            <option>20DC</option><option>40DC</option><option>40HC</option>
+            <option>45HC</option><option>Open Top</option><option>Flat Rack</option>
+            <option>Reefer</option><option>LCL</option>
+          </select>
+        </td>
+        <td><input type="number" min="0" step="1" class="form-control" name="${svc}_cont_${idx}_cantidad" data-cont-cant></td>
+        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-cont-del>&times;</button></td>`;
+      tBody.appendChild(tr);
+      idx++;
+      tr.querySelector('[data-cont-cant]').addEventListener('input', recalcTotal);
+      tr.querySelector('[data-cont-del]').addEventListener('click',()=>{ tr.remove(); recalcTotal(); });
+    }
+    btnAdd.addEventListener('click', addRow);
+  }
+
+  // ---------- INIT ----------
+document.addEventListener('DOMContentLoaded', function(){
+
+  // Cliente/prospecto + hidden legible
+  qa('input[name="cliente_tipo"]').forEach(r=>r.addEventListener('change', toggleProspecto));
+  toggleProspecto();
+  q('#cliente_id')?.addEventListener('change', syncClienteHidden);
+  q('#prospecto_nombre')?.addEventListener('input', syncClienteHidden);
+  syncClienteHidden();
+
+  // Cotiza por
+  qa('input[name="cotiza_por"]').forEach(r=>r.addEventListener('change', toggleCotiza));
+  toggleCotiza();
+
+  // Servicios
+  qa('input[name="servicios[]"]').forEach(c=>c.addEventListener('change', toggleSections));
+  toggleSections();
+
+  // ⬇⬇⬇ PASO 4: siembra inicial desde el servicio maestro (añadir aquí)
+  seedAllFromMaster();
+
+  // Seguro requerido
+  SVC_PREFIXES.forEach(setupSeguroRequired);
+
+  // País->Ciudad
+  SVC_PREFIXES.forEach(setupCountryCity);
+
+  // Contenedores y modalidad
+  setupContenedores('maritimo');
+  setupContenedores('terrestre');
+  setupModalidadToggle('maritimo');
+  setupModalidadToggle('terrestre');
+
+  // Agrega filas iniciales
+  addTotalesRow();
+  addDimensionRow();
+
+  // Autorrelleno entre servicios (listeners de propagación)
+  wireSyncHandlers();
+
+  // Validación al enviar
+  q('#form-solicitud')?.addEventListener('submit', function(e){
+    const any = q('input[name="servicios[]"]:checked');
+    if (!any){ e.preventDefault(); e.stopPropagation(); alert('Selecciona al menos un tipo de servicio.'); return; }
+    syncClienteHidden();
+    recomputeTotales();
+    recomputeDimensiones();
+  });
+});
+</script>
+{% endblock %}

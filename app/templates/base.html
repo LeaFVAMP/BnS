@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Cotizador{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style> body { padding-bottom: 40px; } </style>
+  </head>
+  <body>
+    <!-- NAVBAR (única) -->
+    <nav class="navbar navbar-expand-lg bg-light border-bottom">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('auth.index') }}">Cotizador</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="topNav">
+          <!-- IZQUIERDA -->
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.index') }}">Inicio</a></li>
+
+            {% if current_user.is_authenticated %}
+              {% set rol = (current_user.rol or '').lower() %}
+
+              {% if rol in ['ventas', 'admin'] %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('ventas.dashboard') }}">Dashboard Ventas</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('ventas.crear_solicitud') }}">Nueva Solicitud</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('ventas.listar_solicitudes') }}">Historial</a></li>
+              {% endif %}
+
+              {% if rol in ['pricing', 'admin'] %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing.panel') }}">Panel</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing.pendientes') }}">Pendientes</a></li>
+              {% endif %}
+            {% endif %}
+          </ul>
+
+          <!-- DERECHA -->
+          <ul class="navbar-nav ms-auto">
+            {% if current_user.is_authenticated %}
+              <li class="nav-item">
+                <span class="navbar-text me-2">{{ current_user.nombre or current_user.email }}</span>
+              </li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}">Cerrar sesión</a></li>
+            {% else %}
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Iniciar sesión</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- FLASHES -->
+    <div class="container mt-3">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% if msgs %}
+          {% for cat, msg in msgs %}
+            <div class="alert alert-{{ 'warning' if cat == 'message' else cat }} alert-dismissible fade show">
+              {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- CONTENIDO -->
+    <main class="container mt-3">
+      {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Pendientes de Pricing{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Pendientes de Pricing</h4>
+    <a class="btn btn-outline-secondary" href="{{ url_for('ventas.listar_solicitudes') }}">Volver a solicitudes</a>
+  </div>
+
+  {% set solicitudes = solicitudes|default([]) %}
+  {% if solicitudes %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Folio</th>
+          <th>Cliente</th>
+          <th>Estatus</th>
+          <th>Creada</th>
+          <th style="width:1%"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in solicitudes %}
+        <tr>
+          <td>{{ s.numero_serie }}</td>
+          <td>{{ s.cliente }}</td>
+          <td>{{ s.estatus }}</td>
+          <td>{{ s.fecha_solicitud.strftime('%Y-%m-%d %H:%M') if s.fecha_solicitud else '' }}</td>
+          <td>
+            <a class="btn btn-sm btn-primary" href="{{ url_for('pricing.solicitud', sol_id=s.id) }}">Abrir</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="alert alert-info">No hay pendientes por ahora.</div>
+  {% endif %}
+</div>
+{% endblock %}

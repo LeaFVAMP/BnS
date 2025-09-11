@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Historial{% endblock %}
+{% block content %}
+<h3>Historial de solicitudes</h3>
+<table class="table table-sm align-middle">
+  <thead>
+    <tr>
+      <th>Folio</th>
+      <th>Fecha</th>
+      <th>Cliente</th>
+      <th>Servicios</th>
+      <th>Estatus</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in solicitudes %}
+      {% set lista = (s.servicios_solicitados | loads) %}
+      <tr>
+        <td>{{ s.numero_serie }}</td>
+        <td>{{ s.fecha_solicitud.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ s.cliente }}</td>
+        <td>{{ ', '.join(lista) }}</td>
+        <td>{{ s.estatus }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Panel de Pricing{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Panel de Pricing</h4>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{{ url_for('ventas.listar_solicitudes') }}">Ver solicitudes</a>
+      <a class="btn btn-primary" href="{{ url_for('ventas.crear_solicitud') }}">+ Nueva solicitud</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6 class="card-title">Accesos rápidos</h6>
+          <ul class="mb-0">
+            <li><a href="{{ url_for('ventas.listar_solicitudes') }}">Historial de solicitudes</a></li>
+            <li><a href="{{ url_for('ventas.crear_solicitud') }}">Crear solicitud</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="alert alert-info mb-0">
+        Este panel es un placeholder. Conecta aquí tus KPIs o pendientes de pricing.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
