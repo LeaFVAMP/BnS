@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Comparar opciones — {{ s.numero_serie }}{% endblock %}
+{% block content %}
+<div class="container my-3">
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">Comparar opciones — Solicitud {{ s.numero_serie }}</h4>
+    <a class="btn btn-outline-secondary" href="{{ url_for('ventas.listar_solicitudes') }}">Volver</a>
+  </div>
+  <div class="text-muted">Cliente: {{ s.cliente }}</div>
+
+  {% if not opciones %}
+    <div class="alert alert-info mt-3">Aún no existen opciones de cotización para esta solicitud.</div>
+  {% endif %}
+
+  {% for op in opciones %}
+    <div class="card my-4">
+      <div class="card-header d-flex flex-wrap align-items-center gap-3">
+        <div class="me-auto">
+          <strong>Opción {{ loop.index }}</strong>
+          <span class="text-muted">— {{ op.tipo_servicio|capitalize }}</span>
+          <span class="badge bg-light text-dark ms-2">{{ op.moneda }}</span>
+          {% if op.cbm_cotizado %}<span class="ms-2">CBM: <strong>{{ op.cbm_cotizado }}</strong></span>{% endif %}
+          {% if op.transito_estimado_dias %}<span class="ms-2">TT (pricing): <strong>{{ op.transito_estimado_dias }} días</strong></span>{% endif %}
+          {% if op.dias_libres_destino %}<span class="ms-2">Días libres: <strong>{{ op.dias_libres_destino }}</strong></span>{% endif %}
+          {% if op.vigencia_pricing %}<span class="ms-2">Vigencia (pricing): <strong>{{ op.vigencia_pricing }}</strong></span>{% endif %}
+        </div>
+
+        <!-- Campos específicos de esta vista -->
+        <div class="d-flex align-items-center gap-2">
+          <label class="small mb-0">Vigencia cotización</label>
+          <input type="text" class="form-control form-control-sm" style="width: 160px"
+                 placeholder="ej. 7 días" data-op="{{ op.id }}" data-k="vigencia">
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small mb-0">TT ventas (días)</label>
+          <input type="number" min="0" step="1" class="form-control form-control-sm" style="width: 100px"
+                 value="{{ op.transito_estimado_dias or '' }}" data-op="{{ op.id }}" data-k="ttv">
+        </div>
+        <div class="vr mx-2"></div>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small mb-0">Markup global (%)</label>
+          <input type="number" step="0.01" class="form-control form-control-sm" style="width: 110px"
+                 value="20" data-op="{{ op.id }}" data-k="markup">
+        </div>
+        <a class="btn btn-primary"
+           href="{{ url_for('ventas.confirmar_opcion', op_id=op.id) }}">Elegir esta opción</a>
+      </div>
+
+      {% if op.terminos_condiciones %}
+        <div class="card-body pb-0">
+          <div class="small text-muted mb-1">Términos y condiciones (pricing):</div>
+          <div class="border rounded p-2 bg-light">{{ op.terminos_condiciones }}</div>
+        </div>
+      {% endif %}
+
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-2 opc-tabla" id="tbl-{{ op.id }}" data-opid="{{ op.id }}">
+            <thead>
+              <tr>
+                <th style="width:8%">Tipo</th>
+                <th style="width:18%">Concepto</th>
+                <th style="width:14%">Proveedor</th>
+                <th style="width:7%">Moneda</th>
+                <th style="width:8%">Unidad</th>
+                <th style="width:7%" class="text-end">Cant.</th>
+                <th style="width:9%" class="text-end">Tarifa</th>
+                <th style="width:7%" class="text-end">PS</th>
+                <th style="width:9%" class="text-end">Costo</th>
+                <th style="width:9%" class="text-end">Costo total</th>
+
+                <!-- Amarillas (por renglón) -->
+                <th class="table-warning text-end" style="width:8%">Markup %</th>
+                <th class="table-warning text-end" style="width:9%">Profit $</th>
+                <th class="table-warning text-end" style="width:9%">Venta</th>
+                <th class="table-warning text-end" style="width:8%">Margen</th>
+
+                <th style="width:7%" class="text-end">IVA $</th>
+                <th style="width:7%" class="text-end">Ret $</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for it in opciones_items[op.id] %}
+              {% set cantidad = (it.cantidad or 0)|float %}
+              {% set unit = (it.precio_unit or 0)|float %}
+              {% set base = cantidad * unit %}
+              {% set iva  = base * ((it.iva_pct or 0)|float) %}
+              {% set ret  = base * ((it.ret_iva_pct or 0)|float) %}
+              {% set total = base + iva + ret %}
+              {% set tipo = 'Flete' if (it.ps or 0) != 0 else ('Origen' if loop.index0==0 else 'Destino') %}
+
+              <tr
+                data-op="{{ op.id }}"
+                data-moneda="{{ it.moneda }}"
+                data-total="{{ '%.6f'|format(total) }}"
+                data-iva="{{ '%.6f'|format(iva) }}"
+                data-ret="{{ '%.6f'|format(ret) }}"
+              >
+                <td>{{ tipo }}</td>
+                <td>{{ it.concepto_nombre or (it.concepto.clave ~ ' — ' ~ it.concepto.descripcion if it.concepto else '') }}</td>
+                <td>{{ it.proveedor or '—' }}</td>
+                <td class="mon">{{ it.moneda }}</td>
+                <td>{{ it.unidad or '—' }}</td>
+                <td class="text-end">{{ '%.4f'|format(cantidad) }}</td>
+                <td class="text-end">{{ '%.2f'|format(unit) }}</td>
+                <td class="text-end">{{ '%.2f'|format(it.ps or 0) }}</td>
+                <td class="text-end">{{ '%.2f'|format(unit + (it.ps or 0)) }}</td>
+                <td class="text-end tot">{{ '%.2f'|format(total) }}</td>
+
+                <!-- Amarillas: inputs por renglón -->
+                <td class="table-warning">
+                  <input type="number" step="0.01" class="form-control form-control-sm text-end mk" placeholder="%">
+                </td>
+                <td class="table-warning">
+                  <input type="number" step="0.01" class="form-control form-control-sm text-end pf" placeholder="$">
+                </td>
+                <td class="table-warning text-end venta">0.00</td>
+                <td class="table-warning text-end margen">0.00%</td>
+
+                <td class="text-end">{{ '%.2f'|format(iva) }}</td>
+                <td class="text-end">{{ '%.2f'|format(ret) }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+
+            <tfoot class="table-light">
+              <tr>
+                <th colspan="9" class="text-end">Totales (opción):</th>
+                <th class="text-end" data-tot="total">0.00</th>
+                <th class="text-end table-warning" data-tot="profit">0.00</th>
+                <th class="text-end table-warning" data-tot="venta">0.00</th>
+                <th class="text-end table-warning" data-tot="margen"></th>
+                <th class="text-end" data-tot="iva">0.00</th>
+                <th class="text-end" data-tot="ret">0.00</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="alert alert-secondary d-flex align-items-center gap-2">
+          <strong>Totales por moneda (VENTA):</strong>
+          <span class="badge bg-light text-dark" data-badge="USD">USD: 0.00</span>
+          <span class="badge bg-light text-dark" data-badge="MXN">MXN: 0.00</span>
+          <span class="badge bg-light text-dark" data-badge="EUR">EUR: 0.00</span>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+(function(){
+  const qa = (s, c=document)=>Array.from(c.querySelectorAll(s));
+  const q  = (s, c=document)=>c.querySelector(s);
+  const clamp2 = n => (isFinite(n)? Math.round(n*100)/100 : 0);
+
+  function recalcForOption(opId){
+    const table = q(`#tbl-${opId}`);
+    if(!table) return;
+
+    // Markup global de la opción (solo como DEFAULT)
+    const mkGlobalInp = document.querySelector(`[data-op="${opId}"][data-k="markup"]`);
+    const mkGlobalPct = parseFloat(mkGlobalInp?.value || '0'); // 20 => 20%
+
+    let totalsByMon = {USD:0, MXN:0, EUR:0};
+    let sumTotal=0, sumProfit=0, sumVenta=0, sumIva=0, sumRet=0;
+
+    qa('tbody tr', table).forEach(tr=>{
+      const tot = parseFloat(tr.dataset.total || '0') || 0;
+      const iva = parseFloat(tr.dataset.iva || '0') || 0;
+      const ret = parseFloat(tr.dataset.ret || '0') || 0;
+      const mon = (tr.dataset.moneda || 'MXN').toUpperCase();
+
+      const mkInp = q('.mk', tr);
+      const pfInp = q('.pf', tr);
+
+      let mk = parseFloat(mkInp?.value ?? '');
+      let pf = parseFloat(pfInp?.value ?? '');
+
+      const mkHas = !isNaN(mk);
+      const pfHas = !isNaN(pf);
+
+      // Reglas:
+      // - Si usuario NO llenó mk ni pf del renglón => usa mkGlobal
+      // - Si llena mk% => calcula pf = tot * mk%
+      // - Si llena pf$ => calcula mk% = pf / tot * 100
+      if (!mkHas && !pfHas) {
+        mk = mkGlobalPct;
+        if (mkInp) mkInp.value = (isFinite(mk) ? clamp2(mk).toFixed(2) : '');
+        pf = tot * (mk/100);
+        if (pfInp) pfInp.value = clamp2(pf).toFixed(2);
+      } else if (mkHas && !pfHas) {
+        pf = tot * (mk/100);
+        if (pfInp) pfInp.value = clamp2(pf).toFixed(2);
+      } else if (pfHas && !mkHas) {
+        mk = tot > 0 ? (pf / tot * 100) : 0;
+        if (mkInp) mkInp.value = clamp2(mk).toFixed(2);
+      }
+
+      const venta  = tot + (pf || 0);
+      const margen = venta > 0 ? ((pf || 0) / venta * 100) : 0;
+
+      const ventaCell  = q('.venta', tr);
+      const margenCell = q('.margen', tr);
+      if (ventaCell)  ventaCell.textContent  = clamp2(venta).toFixed(2);
+      if (margenCell) margenCell.textContent = `${clamp2(margen).toFixed(2)}%`;
+
+      totalsByMon[mon] = (totalsByMon[mon]||0) + venta;
+
+      sumTotal  += tot;
+      sumProfit += (pf || 0);
+      sumVenta  += venta;
+      sumIva    += iva;
+      sumRet    += ret;
+    });
+
+    // Totales del tfoot
+    const tf = q('tfoot', table);
+    if(tf){
+      q('[data-tot="total"]',  tf).textContent = clamp2(sumTotal).toFixed(2);
+      q('[data-tot="profit"]', tf).textContent = clamp2(sumProfit).toFixed(2);
+      q('[data-tot="venta"]',  tf).textContent = clamp2(sumVenta).toFixed(2);
+      q('[data-tot="iva"]',    tf).textContent = clamp2(sumIva).toFixed(2);
+      q('[data-tot="ret"]',    tf).textContent = clamp2(sumRet).toFixed(2);
+      // margen global mostrado como texto (promedio ponderado por venta)
+      const margenGlobal = sumVenta > 0 ? (sumProfit / sumVenta * 100) : 0;
+      q('[data-tot="margen"]', tf).textContent = `${clamp2(margenGlobal).toFixed(2)}%`;
+    }
+
+    // Badges por moneda (VENTA)
+    const wrap = table.closest('.card-body');
+    ['USD','MXN','EUR'].forEach(cur=>{
+      const b = q(`[data-badge="${cur}"]`, wrap);
+      if(b) b.textContent = `${cur}: ${clamp2(totalsByMon[cur]||0).toFixed(2)}`;
+    });
+  }
+
+  function wire(){
+    // Recalcular al modificar Markup global
+    qa('[data-k="markup"]').forEach(inp=>{
+      inp.addEventListener('input', ()=> recalcForOption(inp.dataset.op));
+      recalcForOption(inp.dataset.op); // primer render
+    });
+
+    // Inputs por renglón (delegación por tabla)
+    qa('.opc-tabla').forEach(tbl=>{
+      tbl.addEventListener('input', (e)=>{
+        if (e.target.classList.contains('mk') || e.target.classList.contains('pf')) {
+          const opId = tbl.dataset.opid;
+          recalcForOption(opId);
+        }
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', wire);
+})();
+</script>
+{% endblock %}

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Editar' if opcion else 'Nueva' }} opción · {{ s.numero_serie }}{% endblock %}
 {% block content %}
+
 <div class="container my-3">
   <div class="d-flex justify-content-between align-items-center">
     <h4 class="mb-0">{{ 'Editar' if opcion else 'Nueva' }} opción — Solicitud {{ s.numero_serie }}</h4>
@@ -8,37 +9,138 @@
   </div>
   <div class="text-muted">Cliente: {{ s.cliente }}</div>
 
+  {# ===== PÍLDORAS PARA HERMANAS DEL MISMO FOLIO ===== #}
+  {% set tab_order = [('aereo','Aéreo'), ('maritimo','Marítimo'), ('terrestre','Terrestre')] %}
+  <ul class="nav nav-pills my-3">
+    {% for tkey, tlabel in tab_order %}
+      {% set hermana = siblings.get(tkey) if siblings is defined else None %}
+      {% set modpill = (siblings_modalidad.get(tkey) if siblings_modalidad is defined else None) %}
+      <li class="nav-item me-2">
+        {% if hermana %}
+          {% set hid = hermana if hermana is number else hermana.id %}
+          <a class="nav-link d-flex align-items-center gap-2 {{ 'active' if tipo==tkey else '' }}"
+             href="{{ url_for('pricing.cotizar', sol_id=hid, tipo=tkey) }}">
+            <span>{{ tlabel }}</span>
+            {% if modpill %}<span class="badge rounded-pill text-bg-secondary">{{ modpill }}</span>{% endif %}
+          </a>
+        {% else %}
+          <span class="nav-link disabled">{{ tlabel }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  {# ===== RESUMEN EXPLÍCITO DE LA SOLICITUD SELECCIONADA ===== #}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="small text-muted">Tipo de servicio</div>
+          <div class="fw-semibold text-capitalize">{{ tipo }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Modalidad</div>
+          <div class="fw-semibold">
+            {{ s.modalidad_resumen or '—' }}
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Incoterm</div>
+          <div class="fw-semibold">{{ s.incoterm or '—' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Tipo de embarque</div>
+          <div class="fw-semibold">{{ s.tipo_embarque or '—' }}</div>
+        </div>
+
+        <div class="col-12"><hr class="my-2"></div>
+
+        <div class="col-md-4">
+          <div class="small text-muted">Origen</div>
+          <div>
+            {{ s.origen_ciudad or '—' }}, {{ s.origen_pais or '—' }}
+            {% if s.origen_puerto %} · Puerto: {{ s.origen_puerto }}{% endif %}
+            {% if s.origen_cruce %} · Cruce: {{ s.origen_cruce }}{% endif %}
+            {% if s.origen_despacho %} · Despacho: {{ s.origen_despacho }}{% endif %}
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="small text-muted">Destino</div>
+          <div>
+            {{ s.destino_ciudad or '—' }}, {{ s.destino_pais or '—' }}
+            {% if s.destino_puerto %} · Puerto: {{ s.destino_puerto }}{% endif %}
+            {% if s.destino_cruce %} · Cruce: {{ s.destino_cruce }}{% endif %}
+            {% if s.destino_despacho %} · Despacho: {{ s.destino_despacho }}{% endif %}
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="small text-muted">Unidad/Servicio</div>
+          <div>
+            {{ s.unidad or '—' }} · {{ s.servicio_unidad or '—' }}
+            {% if s.maniobra and s.maniobra!='ninguna' %} · Maniobra: {{ s.maniobra }}{% endif %}
+            {% if s.numero_contenedor %} · #Cont.: {{ s.numero_contenedor }}{% endif %}
+            {% if s.tipo_contenedor %} · Tipo cont.: {{ s.tipo_contenedor }}{% endif %}
+          </div>
+        </div>
+
+        <div class="col-12"><hr class="my-2"></div>
+
+        <div class="col-md-3">
+          <div class="small text-muted">Volumen (CBM)</div>
+          <div>{{ '%.4f'|format(s.volumen_cbm|float) if s.volumen_cbm is not none else '—' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Estibable</div>
+          <div>{{ 'Sí' if s.estibable else 'No' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Seguro</div>
+          <div>{{ 'Sí' if s.seguro else 'No' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">CBM Totales</div>
+          <div>{{ '%.4f'|format(s.cbm_totales|float) if s.cbm_totales is not none else '—' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <form method="POST">
     {{ csrf_token() if csrf_token is defined }}
 
-    <div class="row g-3 mt-3">
+    <div class="row g-3 mt-1">
       <div class="col-md-4">
-        <label class="form-label">Proveedor (global)</label>
-        <input type="text" class="form-control" name="proveedor" value="{{ opcion.proveedor if opcion else '' }}" required>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Moneda (global)</label>
-        <select name="moneda" class="form-select" id="moneda_global">
-          {% for m in ["USD","EUR","MXN"] %}
-            <option value="{{m}}" {{ 'selected' if opcion and opcion.moneda==m else '' }}>{{m}}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-3">
         <label class="form-label">CBM cotizado {% if is_lcl %}(LCL 0&lt;cbm&lt;1 ⇒ 1){% endif %}</label>
         <input
           type="number" step="0.0001" name="cbm_cotizado" id="cbm_cotizado" class="form-control"
           value="{{ ('%.4f' % opcion.cbm_cotizado) if (opcion and opcion.cbm_cotizado is not none) else (cbm_prefill or '') }}"
         >
       </div>
+      <div class="col-md-4">
+        <label class="form-label">Origen final</label>
+        <input name="origen_final" class="form-control" value="{{ opcion.origen_final if opcion else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Destino final</label>
+        <input name="destino_final" class="form-control" value="{{ opcion.destino_final if opcion else '' }}">
+      </div>
     </div>
 
-    <div class="row g-3 mt-2">
-      <div class="col-md-4"><label class="form-label">Origen final</label><input name="origen_final" class="form-control" value="{{ opcion.origen_final if opcion else '' }}"></div>
-      <div class="col-md-4"><label class="form-label">Destino final</label><input name="destino_final" class="form-control" value="{{ opcion.destino_final if opcion else '' }}"></div>
-      <div class="col-md-2"><label class="form-label">Frecuencia</label><input name="frecuencia" class="form-control" value="{{ opcion.frecuencia if opcion else '' }}"></div>
-      <div class="col-md-2"><label class="form-label">TT (días)</label><input type="number" name="transito_estimado_dias" class="form-control" value="{{ opcion.transito_estimado_dias if opcion else '' }}"></div>
-      <div class="col-md-2"><label class="form-label">Días libres</label><input type="number" name="dias_libres_destino" class="form-control" value="{{ opcion.dias_libres_destino if opcion else '' }}"></div>
+    <div class="row g-3 mt-1">
+      <div class="col-md-4">
+        <label class="form-label">Frecuencia</label>
+        <input name="frecuencia" class="form-control" value="{{ opcion.frecuencia if opcion else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">TT (días)</label>
+        <input type="number" name="transito_estimado_dias" class="form-control"
+               value="{{ opcion.transito_estimado_dias if opcion else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Días libres</label>
+        <input type="number" name="dias_libres_destino" class="form-control"
+               value="{{ opcion.dias_libres_destino if opcion else '' }}">
+      </div>
     </div>
 
     <div class="mt-2">
@@ -58,7 +160,7 @@
         {% endfor %}
         <option value="__OTROS__">Otros… (fila vacía)</option>
       </select>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddItem">+ Agregar</button>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddFromSelect">+ Agregar</button>
     </div>
 
     <div class="table-responsive mt-2">
@@ -80,8 +182,6 @@
             <th style="width:8%">IVA $</th>
             <th style="width:7%">Ret %</th>
             <th style="width:8%">Ret $</th>
-            <th style="width:6%">TT</th>
-            <th style="width:10%">Ruta</th>
             <th style="width:4%"></th>
           </tr>
         </thead>
@@ -92,15 +192,17 @@
             <th class="text-end" id="sum_subtotal">0.00</th>
             <th></th><th class="text-end" id="sum_iva">0.00</th>
             <th></th><th class="text-end" id="sum_ret">0.00</th>
-            <th colspan="2"></th>
           </tr>
-          <tr class="table-light">
-            <th colspan="13" class="text-end">TOTAL</th>
-            <th class="text-end" id="sum_total">0.00</th>
-            <th colspan="2"></th>
-          </tr>
+          {# Fila TOTAL (moneda seleccionada) removida según lo solicitado #}
         </tfoot>
       </table>
+    </div>
+
+    <div class="alert alert-secondary d-flex align-items-center gap-2">
+      <strong>Totales por moneda:</strong>
+      <span class="badge bg-light text-dark" id="tot_usd">Total USD: 0.00</span>
+      <span class="badge bg-light text-dark" id="tot_mxn">Total MXN: 0.00</span>
+      <span class="badge bg-light text-dark" id="tot_eur">Total EUR: 0.00</span>
     </div>
 
     <input type="hidden" name="items_json" id="items_json">
@@ -128,12 +230,41 @@
   <option value="Kg"><option value="Ton"><option value="Pallet"><option value="Caja">
 </datalist>
 
+
+<style>
+/* Evita spinners y mejora legibilidad en inputs numéricos pequeños */
+input[type="number"].no-spin::-webkit-outer-spin-button,
+input[type="number"].no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"].no-spin { -moz-appearance: textfield; }
+
+.w-iva-ret { min-width: 6rem; }   /* 96px aprox; ajusta si quieres */
+.w-cant    { min-width: 5rem; }
+.w-tarifa  { min-width: 6rem; }
+.w-ps      { min-width: 5rem; }
+
+/* Sin spinners en inputs numéricos de la tabla */
+#tblItems input[type=number]::-webkit-outer-spin-button,
+#tblItems input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#tblItems input[type=number] { -moz-appearance: textfield; }
+
+/* Que quepan bien las tasas en % */
+#tblItems input[data-k="iva_pct"],
+#tblItems input[data-k="ret_iva_pct"] { min-width: 64px; text-align: right; }
+
+
+</style>
+
+
 <script>
 /* ===== Helpers DOM ===== */
 const q  = (s, c=document)=>c.querySelector(s);
 const qa = (s, c=document)=>Array.from(c.querySelectorAll(s));
 const toNum = v => { const s=(v??'').toString().trim(); return s===''?0:parseFloat(s); };
 const clamp2 = n => isFinite(n) ? Math.round(n*100)/100 : 0;
+
+/* ===== Conversión tasas (UI % ⇄ interno fracción) ===== */
+const toRateDisplay  = v => { const n = toNum(v); return !isFinite(n) ? 0 : (n <= 1 ? n*100 : n); }; // 0.16 -> 16
+const toRateInternal = v => { const n = toNum(v); return !isFinite(n) ? 0 : (n > 1 ? n/100 : n);  }; // 16 -> 0.16
 
 /* ===== Carga de datos ===== */
 const dataEl = q('#cotizar-data');
@@ -146,55 +277,84 @@ function parseJSONTag(id){
   try { return JSON.parse(el.textContent || '[]'); }
   catch(e){ console.warn('JSON inválido en', id, e); return []; }
 }
-const CATALOG = parseJSONTag('catalogo-json'); // [{id, clave, descripcion, moneda, unidad, iva_pct, ret_iva_pct, isr_pct}]
-let ITEMS = parseJSONTag('items-json');        // backend payload base
+const CATALOG = parseJSONTag('catalogo-json');
+let ITEMS = parseJSONTag('items-json');
 
 /* ===== Referencias UI ===== */
 const selAddConcepto = q('#selAddConcepto');
-const btnAddItem     = q('#btnAddItem');
+const btnAddFromSelect = q('#btnAddFromSelect');
 const tblBody        = q('#tblItems tbody');
 const sumSubtotalEl  = q('#sum_subtotal');
 const sumIvaEl       = q('#sum_iva');
 const sumRetEl       = q('#sum_ret');
 const sumTotalEl     = q('#sum_total');
+const totUsd         = q('#tot_usd');
+const totMxn         = q('#tot_mxn');
+const totEur         = q('#tot_eur');
 const hiddenItems    = q('#items_json');
-const selMonedaGlob  = q('#moneda_global');
 
-/* ===== Utilidades negocio ===== */
+/* ===== Utilidades ===== */
+
+// acción centralizada para agregar según selección
+function addFromSelect() {
+  if (!selAddConcepto) return;
+  const v = selAddConcepto.value;
+  if (!v) return;
+  if (v === '__OTROS__') {
+    addFromConcepto(null);
+  } else {
+    const id = parseInt(v, 10);
+    const c = conceptoById(id);
+    addFromConcepto(c || null);
+  }
+  selAddConcepto.value = ''; // limpiar selección
+}
+
+// enganchar botón y también Enter en el select
+btnAddFromSelect?.addEventListener('click', addFromSelect);
+selAddConcepto?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addFromSelect();
+  }
+});
+
 function conceptoById(id){
   id = id==null?null:parseInt(id,10);
   if (!id) return null;
   return CATALOG.find(c => c.id === id) || null;
 }
-
-// Regla LCL: si la unidad es CBM y 0< cantidad <1 => 1 (sólo para el cálculo)
 function normalizeCantidad(unidad, cant){
   let c = toNum(cant);
   if (IS_LCL && (unidad||'').toUpperCase()==='CBM' && c>0 && c<1) c = 1;
   return c;
 }
-
 function computeLine(row){
   const tipo    = (row.tipo || 'Origen');
   const unidad  = (row.unidad || '');
   const cant    = normalizeCantidad(unidad, row.cantidad);
   const tarifa  = toNum(row.tarifa);
   const ps      = (tipo === 'Flete') ? toNum(row.ps) : 0;
-  const costo   = tarifa + ps;                  // unitario
-  const base    = cant * costo;                 // costo total
 
-  const ivaPct  = toNum(row.iva_pct);
-  const retPct  = toNum(row.ret_iva_pct);
-  const isrPct  = toNum(row.isr_pct);
+  const costo   = tarifa + ps;     // unitario
+  const base    = cant * costo;    // costo total base (sin impuestos)
 
-  const iva  = base * ivaPct;
+  // UI permite 16 -> 0.16
+  const ivaPct  = toRateInternal(row.iva_pct);
+  const retPct  = toRateInternal(row.ret_iva_pct);
+  const isrPct  = toRateInternal(row.isr_pct); // por si lo usas después
+
+  const iva  = base * ivaPct;      // proporcionales
   const ret  = base * retPct;
-  const isr  = base * isrPct;                   // por si lo usas
-  const total = base + iva - ret - isr;
+  const isr  = base * isrPct;
+
+  // Costo total = base + IVA + RET (no restamos retenciones)
+  const total = base + iva + ret;
 
   return { costo, base, iva, ret, isr, total };
 }
 
+/* Faltaba esta función: transforma la fila UI en payload para backend */
 function asBackendPayload(row){
   const tipo = (row.tipo || 'Origen');
   const unidad = (row.unidad || '');
@@ -209,25 +369,23 @@ function asBackendPayload(row){
     moneda: row.moneda || MONEDA_DEF,
     unidad: unidad || null,
     cantidad: cantidad,
-    // IMPORTANTE: lo que persiste el backend
     precio_unit: tarifa + ps,
-    iva_pct: toNum(row.iva_pct),
-    ret_iva_pct: toNum(row.ret_iva_pct),
-    isr_pct: toNum(row.isr_pct),
-    // extras futuros (backend los ignorará por ahora)
+    // Guardamos SIEMPRE como fracción 0–1
+    iva_pct: toRateInternal(row.iva_pct),
+    ret_iva_pct: toRateInternal(row.ret_iva_pct),
+    isr_pct: toRateInternal(row.isr_pct),
+    // Extras UI (ignorados por backend)
     tipo: tipo,
-    ps: ps,
-    tt: row.tt || null,
-    ruta: row.ruta || null,
+    ps: ps
   };
 }
 
+/* ===== Render ===== */
 function renderItems(){
   tblBody.innerHTML = '';
   ITEMS.forEach((it, idx) => {
     const calc = computeLine(it);
     const tr = document.createElement('tr');
-
     const isFlete = (it.tipo || 'Origen') === 'Flete';
 
     tr.innerHTML = `
@@ -250,41 +408,43 @@ function renderItems(){
         </select>
       </td>
       <td><input class="form-control form-control-sm" list="unidadesList" data-k="unidad" value="${it.unidad||''}"></td>
-      <td><input class="form-control form-control-sm text-end" type="number" step="0.0001" data-k="cantidad" value="${it.cantidad??''}" title="${IS_LCL?'LCL: si unidad=CBM y 0<cant<1 → 1':''}"></td>
+      <td><input class="form-control form-control-sm text-end" type="number" step="0.0001" data-k="cantidad" value="${it.cantidad??''}"></td>
       <td><input class="form-control form-control-sm text-end" type="number" step="0.01" data-k="tarifa" value="${it.tarifa??(toNum(it.precio_unit)||0)}"></td>
       <td><input class="form-control form-control-sm text-end" type="number" step="0.01" data-k="ps" value="${it.ps??0}" ${isFlete?'':'disabled'}></td>
       <td class="text-end">${clamp2(calc.costo).toFixed(2)}</td>
       <td class="text-end">${clamp2(calc.base).toFixed(2)}</td>
-      <td><input class="form-control form-control-sm text-end" type="number" step="0.0001" data-k="iva_pct" value="${it.iva_pct??0}"></td>
+      <td><input class="form-control form-control-sm text-end" type="number" step="0.01" data-k="iva_pct" value="${toRateDisplay(it.iva_pct)}" placeholder="%" title="Escribe 16 para 16%"></td>
       <td class="text-end">${clamp2(calc.iva).toFixed(2)}</td>
-      <td><input class="form-control form-control-sm text-end" type="number" step="0.0001" data-k="ret_iva_pct" value="${it.ret_iva_pct??0}"></td>
+      <td><input class="form-control form-control-sm text-end" type="number" step="0.01" data-k="ret_iva_pct" value="${toRateDisplay(it.ret_iva_pct)}" placeholder="%" title="Escribe 4 para 4%"></td>
       <td class="text-end">${clamp2(calc.ret).toFixed(2)}</td>
-      <td><input class="form-control form-control-sm text-end" type="number" step="1" data-k="tt" value="${it.tt??''}" ${isFlete?'':'disabled'}></td>
-      <td><input class="form-control form-control-sm" data-k="ruta" value="${it.ruta||''}" ${isFlete?'':'disabled'}></td>
       <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-del>&times;</button></td>
     `;
 
-    // Wire inputs
+    // Evita re-render en cada tecla: recalcula totales pero re-renderiza al salir del campo
     qa('[data-k]', tr).forEach(inp=>{
+      const key = inp.dataset.k;
+
+      // oninput: solo recalcula totales
       inp.addEventListener('input', ()=>{
-        const key = inp.dataset.k;
         let val = inp.value;
-        if (['cantidad','tarifa','ps','iva_pct','ret_iva_pct','isr_pct','tt'].includes(key)) val = toNum(val);
+        if (['cantidad','tarifa','ps','iva_pct','ret_iva_pct','isr_pct'].includes(key)) val = toNum(val);
         ITEMS[idx][key] = val;
+        computeTotals();
+      });
 
-        // Activar/desactivar campos según tipo
-        if (key === 'tipo'){
-          const isF = (val === 'Flete');
-          qa('[data-k="ps"]', tr).forEach(x=>{ x.disabled = !isF; if(!isF){ x.value = ''; ITEMS[idx].ps = 0; } });
-          qa('[data-k="tt"]', tr).forEach(x=>{ x.disabled = !isF; if(!isF){ x.value = ''; ITEMS[idx].tt = null; } });
-          qa('[data-k="ruta"]', tr).forEach(x=>{ x.disabled = !isF; if(!isF){ x.value = ''; ITEMS[idx].ruta = null; } });
+      // onblur: normaliza y re-renderiza fila
+      inp.addEventListener('blur', ()=>{
+        if (['tarifa','ps'].includes(key)) inp.value = clamp2(toNum(inp.value)).toFixed(2);
+        if (['iva_pct','ret_iva_pct','isr_pct'].includes(key)) {
+          const asPct = toRateDisplay(inp.value); // fuerza a 0–100
+          inp.value = clamp2(asPct).toFixed(2);
         }
-
         renderItems();
         computeTotals();
       });
-    });
-    tr.querySelector('[data-del]').addEventListener('click', ()=>{
+    }); // <-- FALTABA cerrar este forEach
+
+    tr.querySelector('[data-del]')?.addEventListener('click', ()=>{
       ITEMS.splice(idx,1);
       renderItems();
       computeTotals();
@@ -293,12 +453,10 @@ function renderItems(){
     tblBody.appendChild(tr);
   });
 
-  // Sync hidden JSON (backend payload)
   hiddenItems.value = JSON.stringify(ITEMS.map(asBackendPayload));
 }
 
 function computeTotals(){
-  // Suma por moneda
   const byM = {};
   ITEMS.forEach(it=>{
     const m = (it.moneda || MONEDA_DEF);
@@ -311,8 +469,17 @@ function computeTotals(){
     byM[m].total += r.total;
   });
 
-  const m = selMonedaGlob ? selMonedaGlob.value : MONEDA_DEF;
-  const t = byM[m] || {sub:0, iva:0, ret:0, isr:0, total:0};
+  const usd = byM['USD'] || {total:0};
+  const mxn = byM['MXN'] || {total:0};
+  const eur = byM['EUR'] || {total:0};
+  totUsd.textContent = `Total USD: ${clamp2(usd.total).toFixed(2)}`;
+  totMxn.textContent = `Total MXN: ${clamp2(mxn.total).toFixed(2)}`;
+  totEur.textContent = `Total EUR: ${clamp2(eur.total).toFixed(2)}`;
+
+  // Para la fila de subtotales visibles (usa la moneda de mayor total)
+  const main = Object.entries(byM).sort((a,b)=>b[1].total - a[1].total)[0];
+  const m = main ? main[0] : 'MXN';
+  const t = main ? main[1] : {sub:0, iva:0, ret:0, total:0};
   sumSubtotalEl.textContent = `${clamp2(t.sub).toFixed(2)} ${m}`;
   sumIvaEl.textContent      = `${clamp2(t.iva).toFixed(2)} ${m}`;
   sumRetEl.textContent      = `${clamp2(t.ret).toFixed(2)} ${m}`;
@@ -322,24 +489,21 @@ function computeTotals(){
 /* ===== Acciones ===== */
 function addFromConcepto(c){
   const base = {
-    // extras UI
     tipo: 'Origen',
     tarifa: 0,
     ps: 0,
-    tt: null,
-    ruta: '',
     nombre_otros: '',
-    // persistibles
     concepto_id: c?.id || null,
     concepto_nombre: c ? `${c.clave} — ${c.descripcion}` : '',
     proveedor: '',
-    moneda: c?.moneda || (selMonedaGlob? selMonedaGlob.value : MONEDA_DEF),
+    moneda: c?.moneda || 'MXN',
     unidad: (c?.unidad || '').toUpperCase(),
     cantidad: 1,
-    precio_unit: 0, // no se usa directo; tarifa + ps → precio_unit al guardar
-    iva_pct: toNum(c?.iva_pct),
-    ret_iva_pct: toNum(c?.ret_iva_pct),
-    isr_pct: toNum(c?.isr_pct),
+    precio_unit: 0,
+    // Al traer del catálogo (guardado en fracción), muéstralo en % al usuario
+    iva_pct: toRateDisplay(c?.iva_pct),
+    ret_iva_pct: toRateDisplay(c?.ret_iva_pct),
+    isr_pct: toRateDisplay(c?.isr_pct),
   };
   ITEMS.push(base);
   renderItems();
@@ -347,36 +511,32 @@ function addFromConcepto(c){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Normaliza items que vienen del backend
   ITEMS = (ITEMS || []).map(it=>{
     const c = it.concepto_id ? conceptoById(it.concepto_id) : null;
+    const srcIva = (it.iva_pct ?? c?.iva_pct ?? 0);
+    const srcRet = (it.ret_iva_pct ?? c?.ret_iva_pct ?? 0);
+    const srcIsr = (it.isr_pct ?? c?.isr_pct ?? 0);
     return {
-      // UI extras por defecto
       tipo: it.tipo || 'Origen',
-      tarifa: toNum(it.precio_unit || 0), // asumimos que precio_unit = tarifa (sin PS guardado)
-      ps: toNum(it.ps || 0),              // si existiera en JSON, lo respetamos
-      tt: it.tt || null,
-      ruta: it.ruta || '',
-      nombre_otros: it.concepto_id ? '' : (it.concepto_nombre || ''),
-
-      // persistibles
+      tarifa: toNum(it.precio_unit || 0),
+      ps: toNum(it.ps || 0),
       concepto_id: it.concepto_id ?? null,
       concepto_nombre: it.concepto_nombre || (c ? `${c.clave} — ${c.descripcion}` : ''),
       proveedor: it.proveedor || '',
-      moneda: it.moneda || MONEDA_DEF,
+      moneda: it.moneda || 'MXN',
       unidad: (it.unidad || c?.unidad || '').toUpperCase(),
       cantidad: toNum(it.cantidad),
       precio_unit: toNum(it.precio_unit),
-      iva_pct: toNum(it.iva_pct ?? c?.iva_pct),
-      ret_iva_pct: toNum(it.ret_iva_pct ?? c?.ret_iva_pct),
-      isr_pct: toNum(it.isr_pct ?? c?.isr_pct),
+      // MUÉSTRALAS en porcentaje (si venían como fracción, multiplícalas x100)
+      iva_pct: toRateDisplay(srcIva),
+      ret_iva_pct: toRateDisplay(srcRet),
+      isr_pct: toRateDisplay(srcIsr),
+      nombre_otros: it.concepto_id ? '' : (it.concepto_nombre || ''),
     };
   });
 
   renderItems();
   computeTotals();
-
-  selMonedaGlob?.addEventListener('change', computeTotals);
 
   selAddConcepto?.addEventListener('change', ()=>{
     const v = selAddConcepto.value;
@@ -389,8 +549,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
     selAddConcepto.value = '';
   });
-
-  btnAddItem?.addEventListener('click', ()=> addFromConcepto(null));
 });
 </script>
 {% endblock %}

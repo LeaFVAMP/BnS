@@ -33,6 +33,13 @@
               {% if rol in ['pricing', 'admin'] %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing.panel') }}">Panel</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing.pendientes') }}">Pendientes</a></li>
+                <!-- NUEVO: visible solo para pricing/admin -->
+                <li class="nav-item">
+                  <a class="nav-link {{ 'active' if request.endpoint == 'pricing.importar_conceptos' else '' }}"
+                     href="{{ url_for('pricing.importar_conceptos') }}">
+                    Importar catálogo
+                  </a>
+                </li>
               {% endif %}
             {% endif %}
           </ul>

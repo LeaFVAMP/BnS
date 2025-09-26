@@ -56,6 +56,18 @@ class Cliente(db.Model):
 class Solicitud(db.Model):
     __tablename__ = "solicitud"
 
+    
+    @property
+    def tipo_servicio_resumen(self) -> str | None:
+        sv = self.servicios.order_by(SolicitudServicio.id.asc()).first()
+        return sv.tipo_servicio.value if sv else None
+
+    @property
+    def modalidad_resumen(self) -> str | None:
+        sv = self.servicios.order_by(SolicitudServicio.id.asc()).first()
+        return sv.modalidad.value if sv and sv.modalidad else None
+
+
     id: Mapped[int] = mapped_column(primary_key=True)
     fecha_solicitud: Mapped[datetime] = mapped_column(db.DateTime, nullable=False, default=func.now())
     numero_serie: Mapped[str] = mapped_column(db.String(32), nullable=False, index=True, unique=True)
@@ -169,6 +181,14 @@ class Solicitud(db.Model):
     __table_args__ = (
         db.UniqueConstraint("folio_id", "child_seq", name="uq_folio_childseq"),
     )
+    # app/models.py (dentro de class Solicitud)
+    venta_decisiones = relationship(
+        "VentaDecision",
+        back_populates="solicitud",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
 
 
 
@@ -176,9 +196,9 @@ class SolicitudServicio(db.Model):
     __tablename__ = "solicitud_servicio"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    solicitud_id: Mapped[int] = mapped_column(ForeignKey("solicitud.id"), nullable=False, index=True)
+    solicitud_id: Mapped[int] = mapped_column(ForeignKey("solicitud.id"), index=True, nullable=False, unique=True)
     tipo_servicio: Mapped[TipoServicio] = mapped_column(Enum(TipoServicio, name="tipo_servicio_enum"), nullable=False)
-    modalidad: Mapped[Modalidad | None] = mapped_column(Enum(Modalidad, name="modalidad_enum"))
+    modalidad: Mapped[Modalidad | None] = mapped_column(Enum(Modalidad, name="modalidad_enum"), nullable=True)
     detalle_json: Mapped[dict | str | None] = mapped_column(db.JSON)
 
     created_at: Mapped[datetime] = mapped_column(db.DateTime, nullable=False, default=func.now())
@@ -300,3 +320,67 @@ class CotizacionItem(db.Model):
     __table_args__ = (
         db.Index("ix_cotizacion_item_opcion_id", "opcion_id"),
     )
+
+class VentaDecision(db.Model):
+    __tablename__ = "venta_decision"
+    id = db.Column(db.Integer, primary_key=True)
+    solicitud_id = db.Column(db.Integer, db.ForeignKey("solicitud.id"), nullable=False)
+    opcion_id = db.Column(db.Integer, db.ForeignKey("cotizacion_opcion.id"), nullable=False)
+
+    moneda = db.Column(db.String(3), nullable=False)
+
+    # Parámetros de venta
+    markup_pct = db.Column(db.Numeric(10, 4), default=0)  # % (ej. 20 -> 20%)
+    tt_ventas_dias = db.Column(db.Integer)                # “TT ventas”
+    vigencia_cotizacion = db.Column(db.String(120))       # ej. “7 días”
+
+
+    # Totales
+    profit_total = db.Column(db.Numeric(18, 6), default=0)
+    venta_total  = db.Column(db.Numeric(18, 6), default=0)
+    margen_pct   = db.Column(db.Numeric(10, 4), default=0)
+
+    # Solicitante
+    solicitante_nombre = db.Column(db.String(120))
+    solicitante_email  = db.Column(db.String(120))
+    solicitante_tel    = db.Column(db.String(60))
+
+    tyc_internos = db.Column(db.Text)       # T&C internos de Compass
+    pdf_path     = db.Column(db.String(300))# dónde guardamos el PDF generad
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    items = db.relationship(
+        "VentaDecisionItem",
+        backref="decision",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+    solicitud = relationship("Solicitud", back_populates="venta_decisiones")
+
+
+class VentaDecisionItem(db.Model):
+    __tablename__ = "venta_decision_item"
+    id = db.Column(db.Integer, primary_key=True)
+    decision_id = db.Column(db.Integer, db.ForeignKey("venta_decision.id"), nullable=False)
+
+    # Copia de datos relevantes del item de pricing
+    concepto_nombre = db.Column(db.String(300))
+    proveedor = db.Column(db.String(160))
+    moneda = db.Column(db.String(3), nullable=False)
+    unidad = db.Column(db.String(40))
+    cantidad = db.Column(db.Numeric(18, 6), default=0)
+    tarifa   = db.Column(db.Numeric(18, 6), default=0)
+    ps       = db.Column(db.Numeric(18, 6), default=0)
+
+    # Cálculos
+    costo_unit = db.Column(db.Numeric(18, 6), default=0)  # tarifa + ps
+    base       = db.Column(db.Numeric(18, 6), default=0)  # cantidad * costo_unit
+    iva        = db.Column(db.Numeric(18, 6), default=0)
+    ret        = db.Column(db.Numeric(18, 6), default=0)
+    total      = db.Column(db.Numeric(18, 6), default=0)  # base + iva + ret
+
+    profit     = db.Column(db.Numeric(18, 6), default=0)
+    venta      = db.Column(db.Numeric(18, 6), default=0)
+    margen_pct = db.Column(db.Numeric(10, 4), default=0)  # Profit/Venta *100
+    tyc_internos: Mapped[str | None] = mapped_column(db.Text, nullable=True)

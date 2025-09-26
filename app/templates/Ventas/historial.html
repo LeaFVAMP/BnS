@@ -2,6 +2,7 @@
 {% block title %}Historial{% endblock %}
 {% block content %}
 <h3>Historial de solicitudes</h3>
+
 <table class="table table-sm align-middle">
   <thead>
     <tr>
@@ -10,17 +11,76 @@
       <th>Cliente</th>
       <th>Servicios</th>
       <th>Estatus</th>
+      <th class="text-end">Acciones</th>
     </tr>
   </thead>
   <tbody>
     {% for s in solicitudes %}
       {% set lista = (s.servicios_solicitados | loads) %}
+      {% set nops = s.cotizacion_opciones.count() if s.cotizacion_opciones is not none else 0 %}
+
+      {# Mapea estatus a color de badge #}
+      {% set est_badge = {
+          'pendiente':'secondary',
+          'en_cotizacion':'info',
+          'ofertado':'warning',
+          'ganada':'success',
+          'perdida':'danger'
+        }[s.estatus] if s.estatus in ['pendiente','en_cotizacion','ofertado','ganada','perdida'] else 'light' %}
+
+      {# Última decisión (para botón PDF), tolerante a ausencia de la relación #}
+      {% set dec = None %}
+      {% set rel = s|attr('venta_decisiones') if (s|attr('venta_decisiones') is defined) else None %}
+
+      {% if rel %}
+        {# Si es relación dynamic (tiene .order_by), toma la primera (ya suele venir ordenada por default) #}
+        {% if rel|attr('order_by') is defined %}
+          {% set dec = rel.first() %}
+        {# Si es lista cargada, toma la última #}
+        {% elif rel|length %}
+          {% set dec = rel[-1] %}
+        {% endif %}
+      {% endif %}
+
       <tr>
         <td>{{ s.numero_serie }}</td>
         <td>{{ s.fecha_solicitud.strftime('%Y-%m-%d %H:%M') }}</td>
         <td>{{ s.cliente }}</td>
         <td>{{ ', '.join(lista) }}</td>
-        <td>{{ s.estatus }}</td>
+        <td><span class="badge text-bg-{{ est_badge }}">{{ s.estatus }}</span></td>
+
+        <td class="text-end">
+          <!-- Ver/gestionar opciones -->
+          <a class="btn btn-sm btn-outline-primary"
+             href="{{ url_for('ventas.comparar_opciones', sol_id=s.id) }}">
+            Ver opciones
+          </a>
+          {% if nops %}
+            <span class="badge text-bg-secondary ms-1">{{ nops }}</span>
+          {% endif %}
+
+          {# Descargar PDF si hay decisión con pdf_path #}
+          {% if dec and dec.pdf_path %}
+            <a class="btn btn-sm btn-success ms-2"
+               href="{{ url_for('ventas.descargar_decision_pdf', dec_id=dec.id) }}">
+              Descargar PDF
+            </a>
+          {% endif %}
+
+          {# Cuando ya está ofertado: mostrar cerrar como Ganada/Perdida #}
+          {% if s.estatus == 'ofertado' %}
+            <form class="d-inline" method="post"
+                  action="{{ url_for('ventas.marcar_resultado', sol_id=s.id, resultado='ganada') }}">
+              {{ csrf_token() if csrf_token is defined }}
+              <button class="btn btn-sm btn-success ms-2">Ganada</button>
+            </form>
+            <form class="d-inline" method="post"
+                  action="{{ url_for('ventas.marcar_resultado', sol_id=s.id, resultado='perdida') }}">
+              {{ csrf_token() if csrf_token is defined }}
+              <button class="btn btn-sm btn-danger ms-1">Perdida</button>
+            </form>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
   </tbody>

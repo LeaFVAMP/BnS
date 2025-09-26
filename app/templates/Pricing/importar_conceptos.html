@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Importar catálogo de conceptos{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h4 class="mb-3">Importar catálogo de conceptos (CSV)</h4>
+
+  <div class="alert alert-info">
+    Estructura esperada (encabezados, UTF-8):
+    <code>clave,descripcion,moneda,unidad,iva_pct,ret_iva_pct,isr_pct</code><br>
+    Las tasas pueden venir como <code>16</code>, <code>16%</code> o <code>0.16</code> (se normalizan a 0–1).
+  </div>
+
+  <form method="POST" enctype="multipart/form-data">
+    {{ csrf_token() if csrf_token is defined }}
+    <div class="mb-3">
+      <label class="form-label">Archivo CSV</label>
+      <input type="file" class="form-control" name="file" accept=".csv" required>
+    </div>
+    <button class="btn btn-primary">Importar</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('ventas.listar_solicitudes') }}">Cancelar</a>
+  </form>
+
+  <hr class="my-4">
+  <p class="small text-muted">
+    Tip: Si tu fuente es Excel, usa <em>Guardar como → CSV UTF-8 (delimitado por comas)</em>.
+  </p>
+</div>
+{% endblock %}

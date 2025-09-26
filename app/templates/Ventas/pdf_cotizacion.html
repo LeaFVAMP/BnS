@@ -1,0 +1,86 @@
+{# app/templates/Ventas/pdf_cotizacion.html #}
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Cotización {{ s.numero_serie }}</title></head>
+<body>
+  <h2>Servicio {{ op.tipo_servicio|capitalize }} — Cotización</h2>
+  <div class="small muted">Folio: {{ s.numero_serie }} · Fecha: {{ (dec.created_at or now()).strftime('%Y-%m-%d') }}</div>
+
+  <h3 style="margin-top:10px">Cliente</h3>
+  <p><strong>{{ s.cliente }}</strong></p>
+
+  <table style="margin-top:6px">
+    <tr>
+      <th>Tipo</th><td>{{ op.tipo_servicio|capitalize }}</td>
+      <th>Moneda</th><td>{{ op.moneda }}</td>
+      <th>Vigencia</th><td>{{ dec.vigencia_cotizacion or '—' }}</td>
+    </tr>
+    <tr>
+      <th>CBM cotizado</th><td>{{ op.cbm_cotizado or '—' }}</td>
+      <th>TT (pricing)</th><td>{{ op.transito_estimado_dias or '—' }} días</td>
+      <th>TT (ventas)</th><td>{{ dec.tt_ventas_dias or '—' }} días</td>
+    </tr>
+    <tr>
+      <th>Días libres</th><td colspan="5">{{ op.dias_libres_destino or '—' }}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:12px">Conceptos</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Tipo</th><th>Concepto</th><th>Proveedor</th><th>Moneda</th>
+        <th>Unidad</th><th class="right">Cant.</th>
+        <th class="right">Precio u.</th><th class="right">IVA $</th>
+        <th class="right">Ret $</th><th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in rows %}
+        {% set cant = (it.cantidad or 0)|float %}
+        {% set unit = (it.precio_unit or 0)|float + (it.ps or 0)|float %}
+        {% set base = cant * unit %}
+        {% set iva  = base * ((it.iva_pct or 0)|float) %}
+        {% set ret  = base * ((it.ret_iva_pct or 0)|float) %}
+        {% set total = base + iva + ret %}
+        <tr>
+          <td>{{ 'Flete' if (it.ps or 0)!=0 else 'Origen/Destino' }}</td>
+          <td>{{ it.concepto_nombre or (it.concepto.clave ~ ' — ' ~ it.concepto.descripcion if it.concepto else '') }}</td>
+          <td>{{ it.proveedor or '—' }}</td>
+          <td>{{ it.moneda }}</td>
+          <td>{{ it.unidad or '—' }}</td>
+          <td class="right">{{ '%.4f'|format(cant) }}</td>
+          <td class="right">{{ '%.2f'|format(unit) }}</td>
+          <td class="right">{{ '%.2f'|format(iva) }}</td>
+          <td class="right">{{ '%.2f'|format(ret) }}</td>
+          <td class="right">{{ '%.2f'|format(total) }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table style="margin-top:10px">
+    <tr>
+      <th>Total costo</th><td class="right">{{ '%.2f'|format(dec.venta_total - dec.profit_total) }} {{ op.moneda }}</td>
+      <th>Profit</th><td class="right">{{ '%.2f'|format(dec.profit_total or 0) }} {{ op.moneda }}</td>
+      <th>Venta</th><td class="right"><strong>{{ '%.2f'|format(dec.venta_total or 0) }} {{ op.moneda }}</strong></td>
+      <th>Markup</th><td class="right">{{ '%.2f'|format(dec.markup_pct or 0) }}%</td>
+      <th>Margen</th><td class="right">{{ '%.2f'|format(dec.margen_pct or 0) }}%</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:12px">Notas / Términos</h3>
+  <div class="small">
+    {% if op.terminos_condiciones %}
+      <p><strong>T&C de Pricing:</strong><br>{{ op.terminos_condiciones|replace('\n','<br>')|safe }}</p>
+    {% endif %}
+    {% if dec.tyc_internos %}
+      <p><strong>T&C internos CompassSolutions:</strong><br>{{ dec.tyc_internos|replace('\n','<br>')|safe }}</p>
+    {% endif %}
+  </div>
+
+  <p class="small muted" style="margin-top:10px">
+    Esta cotización está sujeta a condiciones de mercado y vigencia indicada.
+  </p>
+</body>
+</html>
